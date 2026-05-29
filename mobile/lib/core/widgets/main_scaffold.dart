@@ -53,53 +53,37 @@ extension MainTabX on MainTab {
   }
 }
 
+/// Shell widget untuk StatefulShellRoute — satu instance persistent
+/// selama sesi. IndexedStack dikelola oleh [StatefulNavigationShell]
+/// sehingga tidak ada GlobalKey conflict dan setiap tab branch
+/// state-nya tetap hidup saat tab di-switch.
 class MainScaffold extends StatelessWidget {
-  final MainTab currentTab;
-  final Widget child;
-  final PreferredSizeWidget? appBar;
-  final Widget? floatingActionButton;
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
-  final Color? backgroundColor;
-  final bool extendBody;
+  final StatefulNavigationShell navigationShell;
 
-  const MainScaffold({
-    super.key,
-    required this.currentTab,
-    required this.child,
-    this.appBar,
-    this.floatingActionButton,
-    this.floatingActionButtonLocation,
-    this.backgroundColor,
-    this.extendBody = false,
-  });
-
-  void _navigate(BuildContext context, MainTab tab) {
-    if (tab == currentTab) return;
-    context.go(tab.route);
-  }
+  const MainScaffold({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: appBar,
-      backgroundColor: backgroundColor ?? AppColors.background,
-      extendBody: extendBody,
-      body: child,
-      floatingActionButton: floatingActionButton,
-      floatingActionButtonLocation: floatingActionButtonLocation,
+      backgroundColor: AppColors.background,
+      body: navigationShell,
       bottomNavigationBar: _BottomNav(
-        currentTab: currentTab,
-        onTap: (tab) => _navigate(context, tab),
+        currentIndex: navigationShell.currentIndex,
+        onTap: (index) => navigationShell.goBranch(
+          index,
+          // Tap tab aktif → kembali ke initial route branch tersebut
+          initialLocation: index == navigationShell.currentIndex,
+        ),
       ),
     );
   }
 }
 
 class _BottomNav extends StatelessWidget {
-  final MainTab currentTab;
-  final ValueChanged<MainTab> onTap;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
 
-  const _BottomNav({required this.currentTab, required this.onTap});
+  const _BottomNav({required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -114,17 +98,16 @@ class _BottomNav extends StatelessWidget {
         child: SizedBox(
           height: 60,
           child: Row(
-            children: MainTab.values
-                .map(
-                  (tab) => Expanded(
-                    child: _NavItem(
-                      tab: tab,
-                      active: tab == currentTab,
-                      onTap: () => onTap(tab),
-                    ),
-                  ),
-                )
-                .toList(),
+            children: List.generate(
+              MainTab.values.length,
+              (i) => Expanded(
+                child: _NavItem(
+                  tab: MainTab.values[i],
+                  active: i == currentIndex,
+                  onTap: () => onTap(i),
+                ),
+              ),
+            ),
           ),
         ),
       ),

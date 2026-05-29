@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/loading_widget.dart';
-import '../../../core/widgets/main_scaffold.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../models/dashboard_model.dart';
 import '../providers/dashboard_provider.dart';
@@ -17,21 +16,18 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboardAsync = ref.watch(dashboardProvider);
 
-    return MainScaffold(
-      currentTab: MainTab.beranda,
-      child: dashboardAsync.when(
-        loading: () => const LoadingWidget(message: 'Memuat beranda...'),
-        error: (e, _) => _ErrorView(
-          message: 'Gagal memuat beranda',
-          onRetry: () => ref.invalidate(dashboardProvider),
-        ),
-        data: (data) => _DashboardBody(
-          data: data,
-          onRefresh: () async {
-            ref.invalidate(dashboardProvider);
-            await ref.read(dashboardProvider.future);
-          },
-        ),
+    return dashboardAsync.when(
+      loading: () => const LoadingWidget(message: 'Memuat beranda...'),
+      error: (e, _) => _ErrorView(
+        message: 'Gagal memuat beranda',
+        onRetry: () => ref.invalidate(dashboardProvider),
+      ),
+      data: (data) => _DashboardBody(
+        data: data,
+        onRefresh: () async {
+          ref.invalidate(dashboardProvider);
+          await ref.read(dashboardProvider.future);
+        },
       ),
     );
   }
@@ -51,7 +47,6 @@ class _DashboardBody extends StatelessWidget {
           greeting: data.greeting,
           name: data.userName,
           initials: data.userInitials,
-          roleInClass: data.userRoleInClass,
         ),
         if (data.activeClass != null) _ActiveClassRow(activeClass: data.activeClass!),
         Expanded(
@@ -87,27 +82,12 @@ class _AppHeader extends StatelessWidget {
   final String greeting;
   final String name;
   final String initials;
-  final String? roleInClass;
 
   const _AppHeader({
     required this.greeting,
     required this.name,
     required this.initials,
-    required this.roleInClass,
   });
-
-  String? get _roleLabel {
-    switch (roleInClass) {
-      case 'admin_komting':
-        return 'KOMTING';
-      case 'bendahara':
-        return 'BENDAHARA';
-      case 'mahasiswa':
-        return 'MAHASISWA';
-      default:
-        return null;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,24 +121,6 @@ class _AppHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (_roleLabel != null) ...[
-                  const SizedBox(height: 7),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _roleLabel!,
-                      style: AppTextStyles.badgeSmall.copyWith(
-                        color: AppColors.accent,
-                        fontSize: 10.5,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

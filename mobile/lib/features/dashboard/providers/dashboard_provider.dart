@@ -18,7 +18,8 @@ String _initialsFromName(String? name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardData>((ref) async {
+final dashboardProvider = FutureProvider<DashboardData>((ref) async {
+  ref.keepAlive();
   final user = ref.watch(currentUserProvider);
 
   await Future<void>.delayed(const Duration(milliseconds: 350));

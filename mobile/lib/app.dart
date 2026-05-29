@@ -98,7 +98,7 @@ class KelaskuApp extends StatelessWidget {
 final GoRouter _router = GoRouter(
   initialLocation: '/login',
   routes: [
-    // ── Auth ──────────────────────────────────────────────────
+    // ── Auth (di luar shell) ────────────────────────────────────
     GoRoute(
       path: '/login',
       name: 'login',
@@ -110,34 +110,66 @@ final GoRouter _router = GoRouter(
       builder: (_, _) => const RegisterScreen(),
     ),
 
-    // ── Main tabs ─────────────────────────────────────────────
-    GoRoute(
-      path: '/home',
-      name: 'home',
-      builder: (_, _) => const DashboardScreen(),
-    ),
-    GoRoute(
-      path: '/jadwal',
-      name: 'jadwal',
-      builder: (_, _) => const _PhasePlaceholder(tab: MainTab.jadwal, phase: 5),
-    ),
-    GoRoute(
-      path: '/tugas',
-      name: 'tugas',
-      builder: (_, _) => const _PhasePlaceholder(tab: MainTab.tugas, phase: 6),
-    ),
-    GoRoute(
-      path: '/forum',
-      name: 'forum',
-      builder: (_, _) => const _PhasePlaceholder(tab: MainTab.forum, phase: 9),
-    ),
-    GoRoute(
-      path: '/lainnya',
-      name: 'lainnya',
-      builder: (_, _) => const _LainnyaPlaceholder(),
+    // ── 5 tab utama — StatefulShellRoute.indexedStack ───────────
+    // Setiap branch punya Navigator tersendiri → state tiap tab
+    // tetap hidup saat switch tab (IndexedStack dikelola go_router).
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return MainScaffold(navigationShell: navigationShell);
+      },
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/home',
+              name: 'home',
+              builder: (_, _) => const DashboardScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/jadwal',
+              name: 'jadwal',
+              builder: (_, _) =>
+                  const _PhasePlaceholder(tab: MainTab.jadwal, phase: 5),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/tugas',
+              name: 'tugas',
+              builder: (_, _) =>
+                  const _PhasePlaceholder(tab: MainTab.tugas, phase: 6),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/forum',
+              name: 'forum',
+              builder: (_, _) =>
+                  const _PhasePlaceholder(tab: MainTab.forum, phase: 9),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/lainnya',
+              name: 'lainnya',
+              builder: (_, _) => const _LainnyaPlaceholder(),
+            ),
+          ],
+        ),
+      ],
     ),
 
-    // ── Kelas (Phase 4) ───────────────────────────────────────
+    // ── Detail routes (di luar shell, push navigation) ───────────
     GoRoute(
       path: '/kelas',
       name: 'kelas',
@@ -172,20 +204,21 @@ final GoRouter _router = GoRouter(
   ],
 );
 
-// ── Placeholder widgets ───────────────────────────────────────
+// ── Tab placeholder widgets ────────────────────────────────────────
+// Tidak pakai MainScaffold — bottom nav disediakan oleh MainScaffold shell.
 
-class _PhasePlaceholder extends ConsumerWidget {
+class _PhasePlaceholder extends StatelessWidget {
   final MainTab tab;
   final int phase;
 
   const _PhasePlaceholder({required this.tab, required this.phase});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return MainScaffold(
-      currentTab: tab,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: Text(tab.label)),
-      child: Center(
+      body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
@@ -221,8 +254,8 @@ class _LainnyaPlaceholder extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MainScaffold(
-      currentTab: MainTab.lainnya,
+    return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Lainnya'),
         actions: [
@@ -236,7 +269,7 @@ class _LainnyaPlaceholder extends ConsumerWidget {
           ),
         ],
       ),
-      child: ListView(
+      body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _MenuTile(
