@@ -38,8 +38,8 @@ class ScheduleModel {
       lecturer: json['lecturer'] as String?,
       subjectCode: json['subject_code'] as String?,
       day: json['day'] as String? ?? '',
-      startTime: json['start_time'] as String? ?? '',
-      endTime: json['end_time'] as String? ?? '',
+      startTime: _normalizeTime(json['start_time'] as String? ?? ''),
+      endTime: _normalizeTime(json['end_time'] as String? ?? ''),
       room: json['room'] as String?,
       reminderMinutesBefore: json['reminder_minutes_before'] != null
           ? (json['reminder_minutes_before'] as num).toInt()
@@ -47,6 +47,13 @@ class ScheduleModel {
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
     );
+  }
+
+  // PostgreSQL TIME returns "HH:MM:SS"; normalize to "HH:MM" for display.
+  static String _normalizeTime(String t) {
+    final parts = t.split(':');
+    if (parts.length < 2) return t;
+    return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
   }
 
   static DateTime? _parseDate(dynamic v) {

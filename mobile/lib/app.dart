@@ -19,6 +19,9 @@ import 'features/schedules/screens/schedule_form_screen.dart';
 import 'features/schedules/screens/schedule_screen.dart';
 import 'features/subjects/screens/subject_form_screen.dart';
 import 'features/subjects/screens/subject_list_screen.dart';
+import 'features/tasks/screens/task_detail_screen.dart';
+import 'features/tasks/screens/task_form_screen.dart';
+import 'features/tasks/screens/task_list_screen.dart';
 
 class KelaskuApp extends StatelessWidget {
   const KelaskuApp({super.key});
@@ -145,8 +148,7 @@ final GoRouter _router = GoRouter(
             GoRoute(
               path: '/tugas',
               name: 'tugas',
-              builder: (_, _) =>
-                  const _PhasePlaceholder(tab: MainTab.tugas, phase: 6),
+              builder: (_, _) => const TaskListScreen(),
             ),
           ],
         ),
@@ -191,6 +193,39 @@ final GoRouter _router = GoRouter(
         final classId =
             int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
         return ScheduleFormScreen(classId: classId, scheduleId: scheduleId);
+      },
+    ),
+
+    // ── Tugas routes ──────────────────────────────────────────────
+    GoRoute(
+      path: '/tugas/tambah',
+      name: 'tugas-tambah',
+      builder: (_, state) {
+        final classId =
+            int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
+        return TaskFormScreen(classId: classId);
+      },
+    ),
+    GoRoute(
+      path: '/tugas/:taskId/edit',
+      name: 'tugas-edit',
+      builder: (_, state) {
+        final taskId =
+            int.tryParse(state.pathParameters['taskId'] ?? '') ?? 0;
+        final classId =
+            int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
+        return TaskFormScreen(classId: classId, taskId: taskId);
+      },
+    ),
+    GoRoute(
+      path: '/tugas/:taskId',
+      name: 'tugas-detail',
+      builder: (_, state) {
+        final taskId =
+            int.tryParse(state.pathParameters['taskId'] ?? '') ?? 0;
+        final classId =
+            int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
+        return TaskDetailScreen(classId: classId, taskId: taskId);
       },
     ),
 
