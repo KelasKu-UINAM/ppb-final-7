@@ -23,6 +23,9 @@ import 'features/announcements/screens/announcement_detail_screen.dart';
 import 'features/announcements/screens/announcement_form_screen.dart';
 import 'features/announcements/screens/announcement_list_screen.dart';
 import 'features/classes/providers/class_provider.dart';
+import 'features/forums/screens/chat_screen.dart';
+import 'features/forums/screens/forum_form_screen.dart';
+import 'features/forums/screens/forum_list_screen.dart';
 import 'features/payments/screens/payment_form_screen.dart';
 import 'features/payments/screens/payment_list_screen.dart';
 import 'features/tasks/screens/task_detail_screen.dart';
@@ -163,8 +166,7 @@ final GoRouter _router = GoRouter(
             GoRoute(
               path: '/forum',
               name: 'forum',
-              builder: (_, _) =>
-                  const _PhasePlaceholder(tab: MainTab.forum, phase: 9),
+              builder: (_, _) => const ForumListScreen(),
             ),
           ],
         ),
@@ -252,6 +254,28 @@ final GoRouter _router = GoRouter(
         final classId =
             int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
         return PaymentFormScreen(classId: classId);
+      },
+    ),
+
+    // ── Forum routes ─────────────────────────────────────────────
+    GoRoute(
+      path: '/forum/buat',
+      name: 'forum-buat',
+      builder: (_, state) {
+        final classId =
+            int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
+        return ForumFormScreen(classId: classId);
+      },
+    ),
+    GoRoute(
+      path: '/forum/:forumId',
+      name: 'forum-chat',
+      builder: (_, state) {
+        final forumId =
+            int.tryParse(state.pathParameters['forumId'] ?? '') ?? 0;
+        final classId =
+            int.tryParse(state.uri.queryParameters['classId'] ?? '') ?? 0;
+        return ChatScreen(classId: classId, forumId: forumId);
       },
     ),
 
@@ -365,48 +389,6 @@ final GoRouter _router = GoRouter(
 
 // ── Tab placeholder widgets ────────────────────────────────────────
 // Tidak pakai MainScaffold — bottom nav disediakan oleh MainScaffold shell.
-
-class _PhasePlaceholder extends StatelessWidget {
-  final MainTab tab;
-  final int phase;
-
-  const _PhasePlaceholder({required this.tab, required this.phase});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(tab.label)),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryOverlay,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(tab.icon, size: 32, color: AppColors.primary),
-              ),
-              const SizedBox(height: 18),
-              Text(tab.label, style: AppTextStyles.h2),
-              const SizedBox(height: 6),
-              Text(
-                'Layar ini akan dibuat di Phase $phase.',
-                style: AppTextStyles.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _LainnyaPlaceholder extends ConsumerWidget {
   const _LainnyaPlaceholder();
