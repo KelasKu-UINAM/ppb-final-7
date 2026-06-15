@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_text_styles.dart';
 import 'core/widgets/main_scaffold.dart';
-import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/classes/screens/class_detail_screen.dart';
@@ -22,12 +20,13 @@ import 'features/subjects/screens/subject_list_screen.dart';
 import 'features/announcements/screens/announcement_detail_screen.dart';
 import 'features/announcements/screens/announcement_form_screen.dart';
 import 'features/announcements/screens/announcement_list_screen.dart';
-import 'features/classes/providers/class_provider.dart';
 import 'features/forums/screens/chat_screen.dart';
 import 'features/forums/screens/forum_form_screen.dart';
 import 'features/forums/screens/forum_list_screen.dart';
 import 'features/payments/screens/payment_form_screen.dart';
 import 'features/payments/screens/payment_list_screen.dart';
+import 'features/settings/screens/change_password_screen.dart';
+import 'features/settings/screens/menu_screen.dart';
 import 'features/settings/screens/profile_screen.dart';
 import 'features/settings/screens/whatsapp_config_screen.dart';
 import 'features/tasks/screens/task_detail_screen.dart';
@@ -177,7 +176,7 @@ final GoRouter _router = GoRouter(
             GoRoute(
               path: '/lainnya',
               name: 'lainnya',
-              builder: (_, _) => const _LainnyaPlaceholder(),
+              builder: (_, _) => const MenuScreen(),
             ),
           ],
         ),
@@ -264,6 +263,11 @@ final GoRouter _router = GoRouter(
       path: '/profil',
       name: 'profil',
       builder: (_, _) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/ganti-password',
+      name: 'ganti-password',
+      builder: (_, _) => const ChangePasswordScreen(),
     ),
     GoRoute(
       path: '/pengaturan/whatsapp',
@@ -391,7 +395,9 @@ final GoRouter _router = GoRouter(
       name: 'kelas-detail',
       builder: (_, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return ClassDetailScreen(classId: id);
+        final tab =
+            int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+        return ClassDetailScreen(classId: id, initialTabIndex: tab);
       },
     ),
     GoRoute(
@@ -404,140 +410,3 @@ final GoRouter _router = GoRouter(
     ),
   ],
 );
-
-// ── Tab placeholder widgets ────────────────────────────────────────
-// Tidak pakai MainScaffold — bottom nav disediakan oleh MainScaffold shell.
-
-class _LainnyaPlaceholder extends ConsumerWidget {
-  const _LainnyaPlaceholder();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Ensure classes are loaded even if Lainnya is the first tab visited.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(classProvider.notifier).fetchClasses();
-    });
-
-    final classes = ref.watch(classProvider).classes;
-    final activeClassId = classes.isEmpty ? null : classes.first.id;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Lainnya'),
-        actions: [
-          IconButton(
-            tooltip: 'Keluar',
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
-            },
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _MenuTile(
-            icon: Icons.class_outlined,
-            label: 'Kelas Saya',
-            subtitle: 'Kelola dan lihat kelas',
-            onTap: () => context.push('/kelas'),
-          ),
-          _MenuTile(
-            icon: Icons.campaign_outlined,
-            label: 'Pengumuman',
-            subtitle: 'Pengumuman dari komting',
-            onTap: activeClassId != null
-                ? () => context.push('/pengumuman?classId=$activeClassId')
-                : null,
-          ),
-          _MenuTile(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Iuran',
-            subtitle: 'Tagihan iuran kelas',
-            onTap: activeClassId != null
-                ? () => context.push('/iuran?classId=$activeClassId')
-                : null,
-          ),
-          _MenuTile(
-            icon: Icons.person_outline,
-            label: 'Profil Saya',
-            subtitle: 'Akun & pengaturan',
-            onTap: () => context.push('/profil'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: const Border.fromBorderSide(BorderSide(color: AppColors.border)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: onTap != null ? AppColors.primaryOverlay : AppColors.border,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: onTap != null ? AppColors.primary : AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(label, style: AppTextStyles.sectionTitle.copyWith(fontSize: 13.5)),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.caption.copyWith(fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                if (onTap != null)
-                  const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -112,13 +112,37 @@ class _WhatsappConfigScreenState
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
           children: [
-            Text(
-              'Nomor dan template ini digunakan untuk membuat link pengingat '
-              'iuran WhatsApp ke anggota kelas.',
-              style: AppTextStyles.bodySmall.copyWith(
-                fontSize: 12,
-                color: AppColors.textMuted,
-                height: 1.5,
+            Container(
+              padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+              decoration: BoxDecoration(
+                color: AppColors.primaryOverlay,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.22),
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Nomor dan template ini digunakan untuk membuat link '
+                      'pengingat iuran WhatsApp ke anggota kelas.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        fontSize: 11.5,
+                        color: AppColors.primary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 18),

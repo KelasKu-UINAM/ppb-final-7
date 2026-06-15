@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/loading_widget.dart';
 import '../../../core/widgets/role_badge.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../classes/models/class_model.dart';
 import '../../classes/providers/class_provider.dart';
+
+// Shown when an account-editing action is tapped — backend has no
+// update-profile / change-password endpoint yet (auth.service.js).
+const _comingSoon = 'Fitur ini akan tersedia segera';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -26,11 +29,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
   }
 
+  void _notReady() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text(_comingSoon)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final classState = ref.watch(classProvider);
-    final classes = classState.classes;
+    final classes = ref.watch(classProvider).classes;
+    final activeClass = classes.isEmpty ? null : classes.first;
+    final role = activeClass?.roleInClass;
+    final showRole = role == 'admin_komting' || role == 'bendahara';
 
     if (user == null) {
       return const Scaffold(
@@ -39,406 +50,173 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     }
 
-    // Class where the user can manage WhatsApp config (admin_komting/bendahara).
-    final manageableClass = classes
-        .cast<ClassModel?>()
-        .firstWhere(
-          (c) =>
-              c?.roleInClass == 'admin_komting' ||
-              c?.roleInClass == 'bendahara',
-          orElse: () => null,
-        );
+    final initial = user.name.trim().isEmpty
+        ? '?'
+        : user.name.trim()[0].toUpperCase();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Profil Saya')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+        padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
         children: [
-          _ProfileHeader(name: user.name, email: user.email),
-          const SizedBox(height: 20),
-
-          _SectionLabel(label: 'AKUN'),
-          _InfoCard(
-            rows: [
-              (icon: Icons.email_outlined, label: 'Email', value: user.email),
-              (
-                icon: Icons.phone_outlined,
-                label: 'Nomor HP',
-                value: user.phone?.isNotEmpty == true
-                    ? user.phone!
-                    : 'Belum diatur',
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          _SectionLabel(label: 'KELAS SAYA'),
-          if (classes.isEmpty)
-            _EmptyClasses()
-          else
-            ...classes.map((c) => _ClassRow(kelas: c)),
-          const SizedBox(height: 20),
-
-          _SectionLabel(label: 'PENGATURAN'),
-          if (manageableClass != null)
-            _SettingsTile(
-              icon: Icons.chat_outlined,
-              label: 'Konfigurasi WhatsApp',
-              subtitle: 'Nomor & template pengingat iuran',
-              onTap: () => context.push(
-                '/pengaturan/whatsapp?classId=${manageableClass.id}',
-              ),
-            ),
-          _SettingsTile(
-            icon: Icons.info_outline,
-            label: 'Tentang Aplikasi',
-            subtitle: 'KelasKu UINAM · v1.0.0',
-            onTap: () => _showAbout(context),
-          ),
-          const SizedBox(height: 24),
-
-          // Logout
-          OutlinedButton.icon(
-            onPressed: () => _confirmLogout(context, ref),
-            icon: const Icon(Icons.logout, size: 18),
-            label: const Text('Keluar'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.dangerText,
-              side: const BorderSide(color: AppColors.dangerText),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              textStyle: AppTextStyles.buttonLabel.copyWith(
-                color: AppColors.dangerText,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAbout(BuildContext context) {
-    showAboutDialog(
-      context: context,
-      applicationName: 'KelasKu UINAM',
-      applicationVersion: 'v1.0.0',
-      applicationLegalese:
-          'Aplikasi manajemen kelas untuk mahasiswa dan pengurus kelas '
-          'UIN Alauddin Makassar.',
-    );
-  }
-
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Keluar dari akun?'),
-        content: const Text('Anda perlu login kembali untuk masuk.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Keluar',
-              style: TextStyle(color: AppColors.dangerText),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-    ref.read(authProvider.notifier).logout();
-    if (context.mounted) context.go('/login');
-  }
-}
-
-// ── Profile header ─────────────────────────────────────────────
-
-class _ProfileHeader extends StatelessWidget {
-  final String name;
-  final String email;
-
-  const _ProfileHeader({required this.name, required this.email});
-
-  String get _initial {
-    final t = name.trim();
-    return t.isEmpty ? '?' : t[0].toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              _initial,
-              style: AppTextStyles.h1.copyWith(
-                color: Colors.white,
-                fontSize: 26,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Centered avatar + name + email + role
+          Column(
             children: [
-              Text(
-                name,
-                style: AppTextStyles.h2.copyWith(fontSize: 17),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                email,
-                style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Section label ──────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  final String label;
-
-  const _SectionLabel({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, left: 2),
-      child: Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
-          color: AppColors.textMuted,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Account info card ──────────────────────────────────────────
-
-typedef _InfoRow = ({IconData icon, String label, String value});
-
-class _InfoCard extends StatelessWidget {
-  final List<_InfoRow> rows;
-
-  const _InfoCard({required this.rows});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 0, thickness: 0.5, indent: 48),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-              child: Row(
-                children: [
-                  Icon(rows[i].icon, size: 18, color: AppColors.textMuted),
-                  const SizedBox(width: 14),
-                  Text(
-                    rows[i].label,
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 11.5,
-                      color: AppColors.textMuted,
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: AppTextStyles.h1.copyWith(
+                      color: AppColors.accent,
+                      fontSize: 28,
                     ),
                   ),
-                  const Spacer(),
-                  Flexible(
-                    child: Text(
-                      rows[i].value,
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                user.name,
+                style: AppTextStyles.h2.copyWith(fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                user.email,
+                style: AppTextStyles.bodySmall.copyWith(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (showRole) ...[
+                const SizedBox(height: 8),
+                RoleBadge.fromApi(role),
+              ],
+            ],
+          ),
+          const SizedBox(height: 22),
+
+          // Editable rows (pencil) — wired to "coming soon" until backend ready
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(14),
+              border: const Border.fromBorderSide(
+                BorderSide(color: AppColors.border, width: 0.5),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Column(
+                children: [
+                  _ProfileFieldRow(
+                    label: 'Nama',
+                    value: user.name,
+                    onEdit: _notReady,
+                  ),
+                  const Divider(
+                      height: 0.5, thickness: 0.5, color: AppColors.divider),
+                  _ProfileFieldRow(
+                    label: 'Email',
+                    value: user.email,
+                    onEdit: _notReady,
+                  ),
+                  const Divider(
+                      height: 0.5, thickness: 0.5, color: AppColors.divider),
+                  _ProfileFieldRow(
+                    label: 'No. HP',
+                    value: user.phone?.isNotEmpty == true
+                        ? user.phone!
+                        : 'Belum diatur',
+                    onEdit: _notReady,
                   ),
                 ],
               ),
             ),
-          ],
+          ),
+          const SizedBox(height: 22),
+
+          // Disabled until backend supports profile update
+          Tooltip(
+            message: _comingSoon,
+            child: const CustomButton(
+              label: 'Simpan Perubahan',
+              onPressed: null,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Class membership row ───────────────────────────────────────
+// ── Editable profile field row ─────────────────────────────────
 
-class _ClassRow extends StatelessWidget {
-  final ClassModel kelas;
-
-  const _ClassRow({required this.kelas});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    kelas.name,
-                    style: AppTextStyles.sectionTitle.copyWith(fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    kelas.classCode,
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            RoleBadge.fromApi(kelas.roleInClass, compact: true),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyClasses extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(
-        'Belum bergabung di kelas mana pun.',
-        style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
-      ),
-    );
-  }
-}
-
-// ── Settings tile ──────────────────────────────────────────────
-
-class _SettingsTile extends StatelessWidget {
-  final IconData icon;
+class _ProfileFieldRow extends StatelessWidget {
   final String label;
-  final String subtitle;
-  final VoidCallback onTap;
+  final String value;
+  final VoidCallback onEdit;
 
-  const _SettingsTile({
-    required this.icon,
+  const _ProfileFieldRow({
     required this.label,
-    required this.subtitle,
-    required this.onTap,
+    required this.value,
+    required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryOverlay,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Icon(icon, size: 19, color: AppColors.primary),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style:
-                            AppTextStyles.sectionTitle.copyWith(fontSize: 13),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: AppTextStyles.caption.copyWith(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
-              ],
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 84,
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+              ),
             ),
           ),
-        ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.body.copyWith(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: onEdit,
+            borderRadius: BorderRadius.circular(7),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: const Icon(
+                Icons.edit_outlined,
+                size: 13,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

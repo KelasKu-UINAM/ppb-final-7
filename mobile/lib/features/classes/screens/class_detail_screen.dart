@@ -14,8 +14,13 @@ import '../providers/class_provider.dart';
 
 class ClassDetailScreen extends ConsumerStatefulWidget {
   final int classId;
+  final int initialTabIndex;
 
-  const ClassDetailScreen({super.key, required this.classId});
+  const ClassDetailScreen({
+    super.key,
+    required this.classId,
+    this.initialTabIndex = 0,
+  });
 
   @override
   ConsumerState<ClassDetailScreen> createState() => _ClassDetailScreenState();
@@ -28,7 +33,11 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
   }
 
   @override
