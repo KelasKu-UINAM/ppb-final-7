@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/providers/auth_provider.dart';
+import '../../classes/providers/class_provider.dart';
 import '../models/dashboard_model.dart';
 
 String _greeting([DateTime? now]) {
@@ -22,6 +23,12 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   ref.keepAlive();
   final user = ref.watch(currentUserProvider);
 
+  // Ensure the user's classes are loaded so the "Kelas Aktif" link resolves
+  // to a real class in ClassDetailScreen (classByIdProvider).
+  await ref.read(classProvider.notifier).fetchClasses();
+  final classes = ref.read(classListProvider);
+  final firstClass = classes.isEmpty ? null : classes.first;
+
   await Future<void>.delayed(const Duration(milliseconds: 350));
 
   final now = DateTime.now();
@@ -30,13 +37,15 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
     greeting: _greeting(now),
     userName: user?.name ?? 'Mahasiswa',
     userInitials: _initialsFromName(user?.name),
-    userRoleInClass: 'admin_komting',
-    activeClass: const ClassInfo(
-      id: 1,
-      name: 'Sistem Informasi 4A',
-      faculty: 'Sains dan Teknologi',
-      department: 'Sistem Informasi',
-    ),
+    userRoleInClass: firstClass?.roleInClass,
+    activeClass: firstClass == null
+        ? null
+        : ClassInfo(
+            id: firstClass.id,
+            name: firstClass.name,
+            faculty: firstClass.faculty,
+            department: firstClass.department,
+          ),
     todaySchedules: const [
       ScheduleItem(
         id: 1,
